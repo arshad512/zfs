@@ -206,6 +206,7 @@ unsigned static long zfs_ioctl_legacy_to_ozfs_[] = {
 	ZFS_IOC_POOL_CHECKPOINT,		/* 0x4b:0x4d */
 	ZFS_IOC_POOL_DISCARD_CHECKPOINT,	/* 0x4c:0x4e */
 	ZFS_IOC_POOL_INITIALIZE,		/* 0x4d:0x4f */
+	ZFS_IOC_POOL_CHECKSPARE,		/* 0x4e:0x50 */
 };
 
 unsigned static long zfs_ioctl_ozfs_to_legacy_common_[] = {

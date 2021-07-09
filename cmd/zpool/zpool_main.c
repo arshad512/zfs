@@ -87,6 +87,7 @@ static int zpool_do_remove(int, char **);
 static int zpool_do_labelclear(int, char **);
 
 static int zpool_do_checkpoint(int, char **);
+static int zpool_do_checkspare(int, char **);
 
 static int zpool_do_list(int, char **);
 static int zpool_do_iostat(int, char **);
@@ -154,6 +155,7 @@ typedef enum {
 	HELP_CLEAR,
 	HELP_CREATE,
 	HELP_CHECKPOINT,
+	HELP_CHECKSPARE,
 	HELP_DESTROY,
 	HELP_DETACH,
 	HELP_EXPORT,
@@ -291,6 +293,8 @@ static zpool_command_t command_table[] = {
 	{ NULL },
 	{ "checkpoint",	zpool_do_checkpoint,	HELP_CHECKPOINT		},
 	{ NULL },
+	{ "checkspare",	zpool_do_checkspare,	HELP_CHECKSPARE		},
+	{ NULL },
 	{ "list",	zpool_do_list,		HELP_LIST		},
 	{ "iostat",	zpool_do_iostat,	HELP_IOSTAT		},
 	{ "status",	zpool_do_status,	HELP_STATUS		},
@@ -352,6 +356,8 @@ get_usage(zpool_help_t idx)
 		    "\t    [-m mountpoint] [-R root] <pool> <vdev> ...\n"));
 	case HELP_CHECKPOINT:
 		return (gettext("\tcheckpoint [-d [-w]] <pool> ...\n"));
+	case HELP_CHECKSPARE:
+		return (gettext("\tcheckspare <pool> ...\n"));
 	case HELP_DESTROY:
 		return (gettext("\tdestroy [-f] <pool>\n"));
 	case HELP_DETACH:
@@ -10615,6 +10621,49 @@ zpool_do_load_compat(const char *compat, boolean_t *list)
 	}
 	return (ret);
 }
+
+/*
+ * zpool checkspare <pool>
+ *
+ *
+ * Checkspare vierify if spares are good to be attached
+ */
+int
+zpool_do_checkspare(int argc, char **argv)
+{
+	list_cbdata_t cb = { 0 };
+	zfs_cmd_t zc = { "\0" };
+	zpool_list_t *list;
+	char *pool = NULL;
+	int ret = 0;
+
+	if (argv[1]) {
+		pool = argv[1];
+	} else {
+		fprintf(stderr, "No pool found. Exiting.\n");
+		return -1;
+	}
+
+	argc -= optind;
+	argv += optind;
+
+	/* Property */
+	cb.cb_verbose = B_TRUE;
+	cb.cb_namewidth = 8;	/* 8 until precalc is avail */
+	cb.cb_literal = B_TRUE;
+
+	if ((list = pool_list_get(argc, argv, &cb.cb_proplist,
+	    cb.cb_literal, &ret)) == NULL)
+		return (1);
+
+	/* pass pool name */
+	(void) strlcpy(zc.zc_name, pool, sizeof(zc.zc_name));
+
+	ret = zfs_ioctl(g_zfs, ZFS_IOC_POOL_CHECKSPARE, &zc);
+
+	return (ret);
+}
+
 
 int
 main(int argc, char **argv)

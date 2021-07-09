@@ -2003,6 +2003,37 @@ zfs_ioc_vdev_split(zfs_cmd_t *zc)
 }
 
 static int
+zfs_ioc_pool_checkspare(zfs_cmd_t *zc)
+{
+	int j, error, save_error = 0;
+	spa_t *spa;
+
+	if ((error = spa_open(zc->zc_name, &spa, FTAG)) != 0)
+		return (error);
+
+	for (j = 0; j < spa->spa_spares.sav_count; j++) {
+		vdev_t *vd;
+
+		vd = spa->spa_spares.sav_vdevs[j];
+		/* vdev_open() calls vdev_probe(), which in turn issues IO to
+		 * determin if the device is accessible and good
+		 */
+		error = vdev_open(vd);
+		if (!error)
+			vdev_close(vd);
+		else
+			/* This is not really an error for checkspare.
+			 * Save first seen error to be propogated back
+			 */
+			save_error = error;
+	}
+
+	spa_close(spa, FTAG);
+
+	return (save_error);
+}
+
+static int
 zfs_ioc_vdev_setpath(zfs_cmd_t *zc)
 {
 	spa_t *spa;
@@ -7136,6 +7167,8 @@ zfs_ioctl_init(void)
 	    zfs_ioc_vdev_split);
 	zfs_ioctl_register_pool_modify(ZFS_IOC_POOL_REGUID,
 	    zfs_ioc_pool_reguid);
+	zfs_ioctl_register_pool_modify(ZFS_IOC_POOL_CHECKSPARE,
+	    zfs_ioc_pool_checkspare);
 
 	zfs_ioctl_register_pool_meta(ZFS_IOC_POOL_CONFIGS,
 	    zfs_ioc_pool_configs, zfs_secpolicy_none);
